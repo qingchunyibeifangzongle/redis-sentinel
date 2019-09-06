@@ -1,0 +1,135 @@
+version: "3.4"
+services:
+  redis-master:
+    image: redis:3.2.1
+    container_name: redis-master
+    ports:
+      - 6379:6379
+    # networks:
+    #   redis-cluster:
+    #     # 为容器指定一个静态IP
+    #     ipv4_address: 10.1.0.2
+    environment:
+      TZ: "Asia/Shanghai"
+    volumes:
+      - /Users/tal/Sites/redis/redis/master/data:/data
+      - /Users/tal/Sites/redis/redis/master/config:/usr/local/etc/redis
+    command: redis-server /usr/local/etc/redis/redis.conf    
+    networks:
+      - backend
+
+  redis-slave1:
+    image: redis:3.2.1
+    container_name: redis-slave1
+    depends_on:
+      - redis-master
+    ports:
+      - 6380:6380
+    # networks:
+    #   redis-cluster:
+    #     # 为容器指定一个静态IP
+    #     ipv4_address: 10.1.0.3
+    environment:
+      TZ: "Asia/Shanghai"
+    volumes:
+      - /Users/tal/Sites/redis/redis/slave1/data:/data
+      - /Users/tal/Sites/redis/redis/slave1/config:/usr/local/etc/redis 
+    # command: redis-server --slaveof redis-master 6379
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - backend
+
+  redis-slave2:
+    image: redis:3.2.1
+    container_name: redis-slave2
+    depends_on:
+      - redis-master
+    ports:
+      - 6381:6381
+    # networks:
+    #   redis-cluster:
+    #     # 为容器指定一个静态IP
+    #     ipv4_address: 10.1.0.4
+    environment:
+      TZ: "Asia/Shanghai"
+    volumes:
+      - /Users/tal/Sites/redis/redis/slave2/data:/data
+      - /Users/tal/Sites/redis/redis/slave2/config:/usr/local/etc/redis
+    # command: redis-server --slaveof redis-master 6379
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - backend
+
+  sentinel-1:
+    image: redis:3.2.1
+    container_name: sentinel-1
+    ports:
+      - 26379:26379
+    # environment:
+    #   SENTINEL_DOWN_AFTER=30000
+    #   #每个Sentinel节点都要定期PING命令来判断Redis数据节点和其余Sentinel节点是否可达，如果超过30000毫秒且没有回复，则判定不可达
+    #   SENTINEL_FAILOVER=180000
+    #   #故障转移超时时间为180000毫秒
+    command: redis-sentinel /usr/local/etc/redis/redis-sentinel.conf
+    volumes:
+      - /Users/tal/Sites/redis/sentinel/sentinel-1/config:/usr/local/etc/redis
+      - /Users/tal/Sites/redis/sentinel/sentinel-1/data:/data
+    networks:
+      - backend
+    links: 
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+    # networks:
+    #   default:
+    #     ipv4_address: 10.1.0.5
+
+  sentinel-2:
+    image: redis:3.2.1
+    container_name: sentinel-2
+    ports:
+      - 26380:26379
+    command: redis-sentinel /usr/local/etc/redis/redis-sentinel.conf
+    volumes:
+      - /Users/tal/Sites/redis/sentinel/sentinel-2/config:/usr/local/etc/redis
+      - /Users/tal/Sites/redis/sentinel/sentinel-2/data:/data
+    networks:
+      - backend
+    links: 
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+    # networks:
+    #   default:
+    #     ipv4_address: 10.1.0.6
+
+  sentinel-3:
+    image: redis:3.2.1
+    container_name: sentinel-3
+    ports:
+      - 26381:26379
+    command: redis-sentinel /usr/local/etc/redis/redis-sentinel.conf
+    volumes:
+      - /Users/tal/Sites/redis/sentinel/sentinel-3/config:/usr/local/etc/redis
+      - /Users/tal/Sites/redis/sentinel/sentinel-3/data:/data
+    # networks:
+    #   default:
+    #     ipv4_address: 10.1.0.7
+    networks:
+      - backend
+    links: 
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+
+networks:
+  backend:
+
+# networks:
+#   redis-cluster:
+#     # IP Address Management
+#     ipam:
+#       config:
+#         # 为容器分配一个独立的子网，用来方便为容器指定静态IP
+#         # 使用独立的子网可以避免IP地址冲突的问题
+#         - subnet: 10.1.0.0/16
